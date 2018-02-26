@@ -1,6 +1,6 @@
 --wh_house.pig: transforms visits.txt for a Hive table
 
-visits = LOAD '/user/root/whitehouse/visits.txt' USING PigStorage(',');
+visits = LOAD 'whitehouse/visits.txt' USING PigStorage(',');
 
 potus = FILTER visits BY $19 MATCHES 'POTUS';
 
@@ -12,5 +12,6 @@ project_potus = FOREACH potus GENERATE
    $21 AS location:chararray,
    $25 AS comment:chararray ;
 
+store project_potus INTO 'hive_wh_visits';
 
 
