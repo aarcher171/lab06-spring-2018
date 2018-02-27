@@ -135,6 +135,105 @@
 	Output(s):
 	Successfully stored 6 records (128 bytes) in: "hdfs://ip-172-31-2-208.ec2.internal:8020/user/hadoop/emp_group"
 	```
+	
+4. To see all the relations that you have created: `aliases`
 
 
+## Use PIG to generate a dataset for Hive
+
+1. Exit the Grunt Shell if you haven't already: `grunt> quit;`
+2. Make sure you are within the lab directory. You can check by using the Linux command `pwd` (present working directory). You should be in `/home/hadoop/lab06-spring-2018`, if not change to it.
+3. Unzip the White House visits dataset: `unzip whitehouse_visits.zip`. This creates a file called `whitehouse_visits.txt`
+4. Create a directory within HDFS: `hadoop fs -mkdir whitehouse`
+5. Copy the `whitehouse_visits.txt` file from the local filesystem into HDFS
+	`hadoop fs -put whitehouse_visits.txt whitehouse/visits.txt` (Note the file has been renamed within HDFS)
+5. Explore the contents of the Pig file `wh_visits.pig`. This is a pre-written Pig script that loads the `visits.txt` and extracts certain fields, filters, and writes the output to a location in HDFS: `cat wh_visits.pig`
+6. Run the Pig script: `pig wh_visits.pig`
+7. You should have a set of new files in the `hive_wh_visits` directory inside HDFS:
+
+	```
+	[hadoop@ip-172-31-18-99 lab06-spring-2018]$ hadoop fs -ls
+	Found 3 items
+	drwxr-xr-x   - hadoop hadoop          0 2018-02-26 20:29 hive_wh_visits
+	drwxr-xr-x   - hadoop hadoop          0 2018-02-26 18:14 lab06
+	drwxr-xr-x   - hadoop hadoop          0 2018-02-26 20:28 whitehouse
+	[hadoop@ip-172-31-18-99 lab06-spring-2018]$ hadoop fs -ls hive_wh_visits
+	Found 3 items
+	-rw-r--r--   1 hadoop hadoop          0 2018-02-26 20:29 hive_wh_visits/_SUCCESS
+	-rw-r--r--   1 hadoop hadoop     971339 2018-02-26 20:29 hive_wh_visits/part-v000-o000-r-00000
+	-rw-r--r--   1 hadoop hadoop     142850 2018-02-26 20:28 hive_wh_visits/part-v000-o000-r-00001
+	```
+8. Explore the contents of the results file/files:
+
+	```
+	[hadoop@ip-172-31-18-99 lab06-spring-2018]$ hadoop fs -cat hive_wh_visits/part-v000-o000-r-00000 | head
+	BUCKLEY	SUMMER	10/12/2010 14:48	10/12/2010 14:45	WH
+	CLOONEY	GEORGE	10/12/2010 14:47	10/12/2010 14:45	WH
+	PRENDERGAST	JOHN	10/12/2010 14:48	10/12/2010 14:45	WH
+	LANIER	JAZMIN		10/13/2010 13:00	WH	BILL SIGNING/
+	MAYNARD	ELIZABETH	10/13/2010 12:34	10/13/2010 13:00	WH	BILL SIGNING/
+	MAYNARD	GREGORY	10/13/2010 12:35	10/13/2010 13:00	WH	BILL SIGNING/
+	MAYNARD	JOANNE	10/13/2010 12:35	10/13/2010 13:00	WH	BILL SIGNING/
+	MAYNARD	KATHERINE	10/13/2010 12:34	10/13/2010 13:00	WH	BILL SIGNING/
+	MAYNARD	PHILIP	10/13/2010 12:35	10/13/2010 13:00	WH	BILL SIGNING/
+	MOHAN	EDWARD	10/13/2010 12:37	10/13/2010 13:00	WH	BILL SIGNING/
+	cat: Unable to write to output stream.
+	```
+8. You will use this file as an input to Hive in the next exercise
+	
 ## Hive Exercises
+
+1. Start the hive console:
+
+	```
+	[hadoop@ip-172-31-18-99 lab06-spring-2018]$ hive
+	
+	Logging initialized using configuration in file:/etc/hive/conf.dist/hive-log4j2.properties Async: false
+	hive>
+	```
+	
+2. Create an **External Table** from the file created earlier:
+
+	```
+	create external table wh_visits (
+	lname string, 
+	fname string,
+	time_of_arrival string, 
+	appt_scheduled_time string,
+	meeting_location string,
+	info_comment string
+	) 
+	ROW FORMAT DELIMITED
+	FIELDS TERMINATED BY '\t' 
+	LOCATION  '/user/hadoop/hive_wh_visits/';
+	```
+
+3. Count the number of records in the `wh_visits` table:
+
+	```
+	select count(*) from wh_visits;
+	```
+
+4. Explore 20 records: 
+
+	```
+	select * from wh_visits limit 20;
+	```
+
+5. Write a SQL query that gives you the count of comments for records where the comment is not empty.
+
+6. Once you figure out the correct SQL statement, create a CSV file in HDFS with the results of the query from the previous step. The syntax to use is the following:
+
+	```
+	INSERT OVERWRITE DIRECTORY '[[hdfs/s3 output directory]]'
+	ROW FORMAT DELIMITED
+	FIELDS TERMINATED BY ',' 
+	select ...;
+	```
+	Where:
+	- `[[hdfs/s3 output directory]]` is the name of a **directory** to be created, where the results files from the MapReduce process will be placed.
+	- `select ...` is the query
+
+
+
+
